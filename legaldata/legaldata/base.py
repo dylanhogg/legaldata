@@ -39,7 +39,7 @@ class Crawler:
     @staticmethod
     def _get_header_info(headers):
         filename = headers.get("Content-Disposition").split("filename=")[1]
-        content_type = headers.get("Content-Type").partition(';')[0].strip()
+        content_type = headers.get("Content-Type").partition(";")[0].strip()
         ext = mimetypes.guess_extension(content_type)
         if ext is None:
             logging.info(f"Unknown file type for content_type: {content_type}")
@@ -67,9 +67,9 @@ class Crawler:
             logging.debug(f"header_ext = {header_ext}")
 
             # Pickle binary file contents and headers for cache retrieval
-            with open(cache_filename, mode='rb') as f_in:
+            with open(cache_filename, mode="rb") as f_in:
                 file_bytes = f_in.read()
-                with open(pkl_cache_filename, 'wb') as f_out:
+                with open(pkl_cache_filename, "wb") as f_out:
                     pickle.dump((file_bytes, cache_filename, headers), f_out, protocol=pickle.HIGHEST_PROTOCOL)
 
             # Copy file to target save_path
@@ -82,7 +82,7 @@ class Crawler:
             loaded_from_cache = True
 
             # Load process pkl_cache_filename
-            with open(pkl_cache_filename, 'rb') as f:
+            with open(pkl_cache_filename, "rb") as f:
                 (file_bytes, cache_filename, headers) = pickle.load(f)
                 header_filename, header_ext = self._get_header_info(headers)
                 save_filename = save_filename_no_ext + header_ext
