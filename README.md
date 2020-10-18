@@ -1,4 +1,4 @@
-# legaldata (alpha version)
+# Legal Data (alpha version)
 
 [![pypi Version](https://img.shields.io/pypi/v/legaldata.svg?logo=pypi)](https://pypi.org/project/legaldata/)
 ![Latest Tag](https://img.shields.io/github/v/tag/dylanhogg/legaldata)

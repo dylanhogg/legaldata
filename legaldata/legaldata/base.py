@@ -5,7 +5,7 @@ import string
 import shutil
 import pickle
 from typing import List, Tuple, Dict
-from urllib.request import urlopen, urlretrieve
+from urllib.request import urlretrieve
 from pathlib import Path
 from bs4 import BeautifulSoup
 
@@ -37,7 +37,7 @@ class Crawler:
             f.write(str(obj))
 
     @staticmethod
-    def _get_header_info(headers):
+    def _get_header_info(headers) -> Tuple[str, str]:
         filename = headers.get("Content-Disposition").split("filename=")[1]
         content_type = headers.get("Content-Type").partition(";")[0].strip()
         ext = mimetypes.guess_extension(content_type)
@@ -46,15 +46,25 @@ class Crawler:
             ext = ".unk"
         return filename, ext
 
-    def _scrape_file(self, download_link, save_path, cache_path, use_cache) -> Tuple[str, bool]:
-        save_filename_no_ext = f"{save_path}legal-{self.valid_filename(download_link)}"
+    @staticmethod
+    def _get_save_filename(save_file_prefix, header_filename, header_ext) -> str:
+        if header_ext in header_filename:
+            filename = f"{save_file_prefix}{header_filename}"
+        else:
+            filename = f"{save_file_prefix}{header_filename}{header_ext}"
+        return filename.lower()
+
+    def _scrape_file(self, download_link, save_path, save_file_prefix, cache_path, use_cache) -> Tuple[str, bool]:
+        assert download_link is not None
+        assert save_path is not None
+        assert save_file_prefix is not None
+
         cache_filename = f"{cache_path}legal-{self.valid_filename(download_link)}.urlretrieve"
         cache_filename_exists = Path(cache_filename).is_file()
         pkl_cache_filename = f"{cache_path}legal-{self.valid_filename(download_link)}.pkl"
         pkl_cache_filename_exists = Path(pkl_cache_filename).is_file()
 
         logging.debug(f"use_cache = {use_cache}")
-        logging.debug(f"pkl_cache_filename = {pkl_cache_filename}")
 
         if not use_cache or not pkl_cache_filename_exists or not cache_filename_exists:
             logging.debug(f"Scraping file from url: {download_link}")
@@ -73,7 +83,7 @@ class Crawler:
                     pickle.dump((file_bytes, cache_filename, headers), f_out, protocol=pickle.HIGHEST_PROTOCOL)
 
             # Copy file to target save_path
-            save_filename = save_filename_no_ext + header_ext
+            save_filename = save_path + self._get_save_filename(save_file_prefix, header_filename, header_ext)
             logging.debug(f"Copy new cached file {cache_filename} to {save_filename}")
             shutil.copy2(cache_filename, save_filename)
 
@@ -85,7 +95,7 @@ class Crawler:
             with open(pkl_cache_filename, "rb") as f:
                 (file_bytes, cache_filename, headers) = pickle.load(f)
                 header_filename, header_ext = self._get_header_info(headers)
-                save_filename = save_filename_no_ext + header_ext
+                save_filename = save_path + self._get_save_filename(save_file_prefix, header_filename, header_ext)
                 logging.debug(f"Copy old cached file {cache_filename} to {save_filename}")
                 # TODO: should maybe save file_bytes to save_filename instead of relying on cache_filename existing?
                 shutil.copy2(cache_filename, save_filename)

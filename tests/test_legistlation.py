@@ -18,7 +18,7 @@ def remove_dirs():
 def test_get_acts_cached():
     remove_dirs()
     index_url = "https://www.legislation.gov.au/Browse/Results/ByTitle/Acts/InForce/Pr/0/0/principal"
-    save_filenames_typed = crawler.ActCrawler().get_acts(index_url, save_path, use_cache=True, limit=3)
+    save_filenames_typed = crawler.ActCrawler().get_acts(index_url, save_path, use_cache=True, limit=3, delay_sec=1)
     assert len(save_filenames_typed) > 0
     for file in save_filenames_typed:
         assert Path(file).is_file()
@@ -27,7 +27,7 @@ def test_get_acts_cached():
 def test_get_acts_no_cache():
     remove_dirs()
     index_url = "https://www.legislation.gov.au/Browse/Results/ByTitle/Acts/InForce/Pr/0/0/principal"
-    save_filenames_typed = crawler.ActCrawler().get_acts(index_url, save_path, use_cache=False, limit=1)
+    save_filenames_typed = crawler.ActCrawler().get_acts(index_url, save_path, use_cache=False, limit=1, delay_sec=1)
     assert len(save_filenames_typed) > 0
     for file in save_filenames_typed:
         assert Path(file).is_file()
