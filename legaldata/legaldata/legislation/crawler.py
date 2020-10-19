@@ -51,22 +51,25 @@ class ActCrawler(base.Crawler):
         return download_pages
 
     @staticmethod
-    def _get_act(soup) -> Tuple[List[str], Dict]:
-        # Match: /Details/C2014C00072/18b59cb0-976c-4721-ac2b-c5a57016703b or /Details/<act_code>/<guid>
+    def _get_act(soup) -> Act:
+        # Match: /Details/C2014C00072/18b59cb0-976c-4721-ac2b-c5a57016703b or /Details/<act_code>/<code_guid>
         code_guids = re.findall(
             r"../Details/([^/]*/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})", str(soup)
         )
-        act_download_links = [f"https://www.legislation.gov.au/Details/{code_guid}" for code_guid in code_guids]
-        act_download_links = list(set(act_download_links))
+        download_links = [f"https://www.legislation.gov.au/Details/{code_guid}" for code_guid in code_guids]
+        download_links = list(set(download_links))
 
-        act_metadata = {}
+        meta_tags_tuples = [(x.attrs.get("name", None), x.attrs.get("content", None)) for x in soup.find_all("meta")]
+        meta_tags = dict([(x[0].strip().lower(), x[1].strip()) for x in meta_tags_tuples if x[0] is not None])
 
-        # TODO: get act_metadata like act title, page size, series link, "In force - Latest Version" flag etc
+        title = meta_tags.get("title", "")
+        desc = meta_tags.get("description", "")
 
-        return act_download_links, act_metadata
+        # TODO: get additional metadata like, page size, series link, "In force - Latest Version" flag etc
+        return Act(title, desc, meta_tags, download_links)
 
     def get_acts(self, index_url, save_path, save_file_prefix="legislation.com.au_", cache_path=None, use_cache=True,
-                 limit=None, delay_sec=5) -> List[str]:
+                 act_limit=None, delay_sec=5) -> List[Act]:
         assert index_url is not None
         assert save_path is not None
         assert save_file_prefix is not None
@@ -78,31 +81,34 @@ class ActCrawler(base.Crawler):
         os.makedirs(save_path, exist_ok=True)
 
         logging.debug(f"Crawling index_url: {index_url}")
-        # TODO: handle multiple pages in index page!
+        logging.warning("TODO: Handle multiple pages in index page!")
+        # TODO: Handle multiple pages in index page!
+        #       Currently we hope all acts are on the first page, which is often the case
         (seed_soup, loaded_from_cache) = self._scrape_page(index_url, cache_path, use_cache)
         download_page_urls = self._get_act_download_page_urls(seed_soup)
 
-        all_act_download_links = []
+        acts = []
         for i, download_page_url in enumerate(download_page_urls):
-            if limit is not None and i >= limit:
+            if act_limit is not None and i >= act_limit:
                 break
 
             logging.debug(f"Crawling download page: {download_page_url}")
             (download_soup, loaded_from_cache) = self._scrape_page(download_page_url, cache_path, use_cache)
-            (single_act_download_links, act_metadata) = self._get_act(download_soup)
-            all_act_download_links.extend(single_act_download_links)
+            act = self._get_act(download_soup)
+            acts.append(act)
 
-        saved_act_filenames = []
-        for download_link in all_act_download_links:
-            save_filename, loaded_from_cache = self._scrape_file(download_link, save_path, save_file_prefix, cache_path, use_cache)
-            saved_act_filenames.append(save_filename)
-            if not loaded_from_cache:
-                time.sleep(delay_sec)
+        for act in acts:
+            act.saved_filenames = []
+            for download_link in act.download_links:
+                save_filename, loaded_from_cache = \
+                    self._scrape_file(download_link, save_path, save_file_prefix, cache_path, use_cache)
+                act.saved_filenames.append(save_filename)
+                if not loaded_from_cache:
+                    time.sleep(delay_sec)
 
         # TODO: loop thru download_page_urls for act metadata also
 
-        # TODO: return list of Act classes
-        return saved_act_filenames
+        return acts
 
     @staticmethod
     def get_index_pages() -> List[str]:
