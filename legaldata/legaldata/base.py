@@ -1,3 +1,4 @@
+import os
 import filetype
 import logging
 import mimetypes
@@ -15,9 +16,9 @@ class Crawler:
         self.default_cache_path = ".legaldata-cache/"
 
     @staticmethod
-    def valid_filename(url) -> str:
+    def valid_filename(name) -> str:
         valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
-        filename = url.lower()
+        filename = name.lower()
         filename = filename.replace("https://", "")
         filename = filename.replace("http://", "")
         filename = filename.replace("/", "_")
@@ -47,14 +48,18 @@ class Crawler:
         return filename, ext
 
     @staticmethod
-    def _get_save_filename(save_file_prefix, header_filename, header_ext) -> str:
-        if header_ext in header_filename:
-            filename = f"{save_file_prefix}{header_filename}"
-        else:
-            filename = f"{save_file_prefix}{header_filename}{header_ext}"
-        return filename.lower()
+    def _get_save_filename(act_title, save_file_prefix, header_filename, header_ext) -> Tuple[str, str]:
+        title_filename = "" if act_title is None else Crawler.valid_filename(act_title) + "_"
+        header_filename = header_filename.lower()
 
-    def _scrape_file(self, download_link, save_path, save_file_prefix, cache_path, use_cache) -> Tuple[str, bool]:
+        if header_ext.lower() in header_filename.lower():
+            filename = f"{save_file_prefix}{title_filename}{header_filename}"
+        else:
+            filename = f"{save_file_prefix}{title_filename}{header_filename}{header_ext}"
+
+        return filename.lower(), header_ext.lower()
+
+    def _scrape_file(self, act, download_link, save_path, save_file_prefix, cache_path, use_cache) -> Tuple[str, str, bool]:
         assert download_link is not None
         assert save_path is not None
         assert save_file_prefix is not None
@@ -83,9 +88,12 @@ class Crawler:
                     pickle.dump((file_bytes, cache_filename, headers), f_out, protocol=pickle.HIGHEST_PROTOCOL)
 
             # Copy file to target save_path
-            save_filename = save_path + self._get_save_filename(save_file_prefix, header_filename, header_ext)
-            logging.debug(f"Copy new cached file {cache_filename} to {save_filename}")
-            shutil.copy2(cache_filename, save_filename)
+            save_filename, file_ext = self._get_save_filename(act.title, save_file_prefix, header_filename, header_ext)
+            save_filepath_abs = os.path.abspath(save_path + save_filename)
+            logging.info(f"Copy new cached file {cache_filename} to {save_filepath_abs}")
+
+            assert Path(cache_filename).is_file()
+            shutil.copy2(cache_filename, save_filepath_abs)
 
         else:
             logging.debug(f"Skipping download file: {cache_filename}")
@@ -95,9 +103,13 @@ class Crawler:
             with open(pkl_cache_filename, "rb") as f:
                 (file_bytes, cache_filename, headers) = pickle.load(f)
                 header_filename, header_ext = self._get_header_info(headers)
-                save_filename = save_path + self._get_save_filename(save_file_prefix, header_filename, header_ext)
-                logging.debug(f"Copy old cached file {cache_filename} to {save_filename}")
-                # TODO: should maybe save file_bytes to save_filename instead of relying on cache_filename existing?
-                shutil.copy2(cache_filename, save_filename)
+                save_filename, file_ext = self._get_save_filename(act.title, save_file_prefix, header_filename, header_ext)
+                save_filepath_abs = os.path.abspath(save_path + save_filename)
+                logging.info(f"Copy old cached file {cache_filename} to {save_filepath_abs}")
 
-        return save_filename, loaded_from_cache
+                # TODO: should maybe save file_bytes to save_filename instead of relying on cache_filename existing?
+                assert Path(cache_filename).is_file()
+                shutil.copy2(cache_filename, save_filepath_abs)
+
+        assert Path(save_filepath_abs).is_file()
+        return save_filepath_abs, file_ext, loaded_from_cache

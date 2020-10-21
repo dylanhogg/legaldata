@@ -37,7 +37,7 @@ publish-live: dist
 
 ## Run package locally
 run: venv
-	source venv/bin/activate; PYTHONPATH='legaldata' python -m scraper
+	source venv/bin/activate; PYTHONPATH='legaldata' python -m app
 
 ## Test package locally
 test: venv

@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import json
 import logging
 from pathlib import Path
 from typing import List, Tuple, Dict
@@ -30,14 +31,14 @@ class ActCrawler(base.Crawler):
         logging.debug(f"cache_filename = {cache_filename}")
 
         if not use_cache or not cache_filename_exists:
-            logging.debug(f"Scraping: {url}")
+            logging.info(f"Scraping: {url}")
             response = urlopen(url)
             soup = BeautifulSoup(response, "html.parser")
             if cache_filename is not None:
                 logging.debug(f"Saving to cache: {cache_filename}")
                 self.save(soup, cache_filename)
         else:
-            logging.debug(f"Loading from cache: {cache_filename}")
+            logging.info(f"Loading from cache: {cache_filename}")
             soup = self.load(cache_filename)
             loaded_from_cache = True
 
@@ -80,13 +81,14 @@ class ActCrawler(base.Crawler):
         os.makedirs(cache_path, exist_ok=True)
         os.makedirs(save_path, exist_ok=True)
 
-        logging.debug(f"Crawling index_url: {index_url}")
+        logging.info(f"Crawling index_url: {index_url}")
         logging.warning("TODO: Handle multiple pages in index page!")
         # TODO: Handle multiple pages in index page!
         #       Currently we hope all acts are on the first page, which is often the case
         (seed_soup, loaded_from_cache) = self._scrape_page(index_url, cache_path, use_cache)
         download_page_urls = self._get_act_download_page_urls(seed_soup)
 
+        # Get act information
         acts = []
         for i, download_page_url in enumerate(download_page_urls):
             if act_limit is not None and i >= act_limit:
@@ -97,12 +99,21 @@ class ActCrawler(base.Crawler):
             act = self._get_act(download_soup)
             acts.append(act)
 
+        # Download act files (pdf, docx, etc)
         for act in acts:
             act.saved_filenames = []
-            for download_link in act.download_links:
-                save_filename, loaded_from_cache = \
-                    self._scrape_file(download_link, save_path, save_file_prefix, cache_path, use_cache)
+            for i, download_link in enumerate(act.download_links):
+                # Save binary file (with or without cache)
+                save_filename, file_ext, loaded_from_cache = \
+                    self._scrape_file(act, download_link, save_path, save_file_prefix, cache_path, use_cache)
                 act.saved_filenames.append(save_filename)
+                # Save metadata
+                if i == 0:
+                    metadata_filename = (save_filename.replace(file_ext, "")) + ".json"
+                    with open(metadata_filename, "w") as f:
+                        pretty_json = json.dumps(act.meta_tags, indent=4, sort_keys=True)
+                        f.write(pretty_json)
+                # Throttle
                 if not loaded_from_cache:
                     time.sleep(delay_sec)
 

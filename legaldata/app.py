@@ -9,8 +9,9 @@ def run_legislation_crawler():
     crawler = ActCrawler()
 
     # limit = None
-    act_limit = 1
-    save_path = "./_data/app_output_path_no_limit/" if act_limit is None else f"./_data/app_output_path_limit_{act_limit}/"
+    act_limit = 5
+    delay_sec = 1
+    save_path = "./_data/app_output_path_no_limit/legislation/" if act_limit is None else f"./_data/app_output_path_limit_{act_limit}/legislation/"
 
     # index_urls = crawler.get_index_pages()
     index_urls = ["https://www.legislation.gov.au/Browse/Results/ByTitle/Acts/InForce/Pr/0/0/principal"]
@@ -18,17 +19,16 @@ def run_legislation_crawler():
     start = datetime.datetime.now()
     for index_url in index_urls:
         logging.info(f"index_url: {index_url}")
-        for act in crawler.get_acts(index_url, save_path, act_limit=limit, delay_sec=0.5):
-            logging.info(f"act: {act}")
+        for act in crawler.get_acts(index_url, save_path, act_limit=act_limit, delay_sec=delay_sec):
+            logging.debug(f"act: {act}")
 
     logging.info(f"Finished. Took {datetime.datetime.now() - start}")
 
 
 if __name__ == "__main__":
-    logging.basicConfig(format="%(asctime)s\t[%(levelname)s] %(name)s:\t%(message)s", level=logging.DEBUG)
+    logging.basicConfig(format="%(asctime)s\t[%(levelname)s] %(name)s:\t%(message)s", level=logging.INFO)
 
     vendor = "legislation"
-    output_path = "./_data/scrape_results/"
 
     if vendor == "legislation":
         run_legislation_crawler()
