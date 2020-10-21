@@ -19,6 +19,7 @@ class ActCrawler(base.Crawler):
 
     https://www.legislation.gov.au/Content/Linking
     """
+
     def __init__(self):
         super(ActCrawler, self).__init__()
 
@@ -69,8 +70,16 @@ class ActCrawler(base.Crawler):
         # TODO: get additional metadata like, page size, series link, "In force - Latest Version" flag etc
         return Act(title, desc, meta_tags, download_links)
 
-    def get_acts(self, index_url, save_path, save_file_prefix="legislation.com.au_", cache_path=None, use_cache=True,
-                 act_limit=None, delay_sec=5) -> List[Act]:
+    def get_acts(
+        self,
+        index_url,
+        save_path,
+        save_file_prefix="legislation.com.au_",
+        cache_path=None,
+        use_cache=True,
+        act_limit=None,
+        delay_sec=5,
+    ) -> List[Act]:
         assert index_url is not None
         assert save_path is not None
         assert save_file_prefix is not None
@@ -104,8 +113,9 @@ class ActCrawler(base.Crawler):
             act.saved_filenames = []
             for i, download_link in enumerate(act.download_links):
                 # Save binary file (with or without cache)
-                save_filename, file_ext, loaded_from_cache = \
-                    self._scrape_file(act, download_link, save_path, save_file_prefix, cache_path, use_cache)
+                save_filename, file_ext, loaded_from_cache = self._scrape_file(
+                    act, download_link, save_path, save_file_prefix, cache_path, use_cache
+                )
                 act.saved_filenames.append(save_filename)
                 # Save metadata
                 if i == 0:

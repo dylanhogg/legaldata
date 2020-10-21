@@ -11,7 +11,11 @@ def run_legislation_crawler():
     # limit = None
     act_limit = 2
     delay_sec = 1
-    save_path = "./_data/app_output_path_no_limit/legislation" if act_limit is None else f"./_data/app_output_path_limit_{act_limit}/legislation"
+    save_path = (
+        "./_data/app_output_path_no_limit/legislation"
+        if act_limit is None
+        else f"./_data/app_output_path_limit_{act_limit}/legislation"
+    )
 
     # index_urls = crawler.get_index_pages()
     index_urls = ["https://www.legislation.gov.au/Browse/Results/ByTitle/Acts/InForce/Pr/0/0/principal"]

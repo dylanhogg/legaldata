@@ -59,7 +59,9 @@ class Crawler:
 
         return filename.lower(), header_ext.lower()
 
-    def _scrape_file(self, act, download_link, save_path, save_file_prefix, cache_path, use_cache) -> Tuple[str, str, bool]:
+    def _scrape_file(
+        self, act, download_link, save_path, save_file_prefix, cache_path, use_cache
+    ) -> Tuple[str, str, bool]:
         assert download_link is not None
         assert save_path is not None
         assert save_file_prefix is not None
@@ -103,7 +105,9 @@ class Crawler:
             with open(pkl_cache_filename, "rb") as f:
                 (file_bytes, cache_filename, headers) = pickle.load(f)
                 header_filename, header_ext = self._get_header_info(headers)
-                save_filename, file_ext = self._get_save_filename(act.title, save_file_prefix, header_filename, header_ext)
+                save_filename, file_ext = self._get_save_filename(
+                    act.title, save_file_prefix, header_filename, header_ext
+                )
                 save_filepath_abs = os.path.abspath(os.path.join(save_path, save_filename))
                 logging.info(f"Copy old cached file {cache_filename} to {save_filepath_abs}")
 
