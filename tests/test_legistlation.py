@@ -44,6 +44,6 @@ def test_get_acts_no_cache():
 def xtest_pdf2text():
     for filename in os.listdir(save_path):
         if filename.endswith("pdf"):
-            full_filename = save_path + filename
+            full_filename = os.path.join(save_path, filename)
             print(full_filename)
             pdf2text.convert_pdfminer(full_filename)

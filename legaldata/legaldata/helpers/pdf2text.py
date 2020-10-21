@@ -1,3 +1,4 @@
+import os
 from pdfminer.high_level import extract_text
 
 
@@ -11,7 +12,7 @@ def convert_pdfminer(input_file):
     print("input_file = " + input_file)
     text = extract_text(input_file)
 
-    output_file = input_file + ".pdfminer.txt"
+    output_file = os.path.join(input_file, ".pdfminer.txt")
 
     with open(output_file, "w") as f:
         print("output_file = " + output_file)

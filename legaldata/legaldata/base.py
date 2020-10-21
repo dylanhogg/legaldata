@@ -89,7 +89,7 @@ class Crawler:
 
             # Copy file to target save_path
             save_filename, file_ext = self._get_save_filename(act.title, save_file_prefix, header_filename, header_ext)
-            save_filepath_abs = os.path.abspath(save_path + save_filename)
+            save_filepath_abs = os.path.abspath(os.path.join(save_path, save_filename))
             logging.info(f"Copy new cached file {cache_filename} to {save_filepath_abs}")
 
             assert Path(cache_filename).is_file()
@@ -104,7 +104,7 @@ class Crawler:
                 (file_bytes, cache_filename, headers) = pickle.load(f)
                 header_filename, header_ext = self._get_header_info(headers)
                 save_filename, file_ext = self._get_save_filename(act.title, save_file_prefix, header_filename, header_ext)
-                save_filepath_abs = os.path.abspath(save_path + save_filename)
+                save_filepath_abs = os.path.abspath(os.path.join(save_path, save_filename))
                 logging.info(f"Copy old cached file {cache_filename} to {save_filepath_abs}")
 
                 # TODO: should maybe save file_bytes to save_filename instead of relying on cache_filename existing?
