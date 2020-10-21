@@ -9,20 +9,24 @@ def run_legislation_crawler():
     crawler = ActCrawler()
 
     # limit = None
-    act_limit = 2
+    act_limit = 14
     delay_sec = 1
     save_path = (
-        "./_data/app_output_path_no_limit/legislation"
+        "./_data/app_output_path_no_limit/legislation.com.au/"
         if act_limit is None
-        else f"./_data/app_output_path_limit_{act_limit}/legislation"
+        else f"./_data/app_output_path_limit_{act_limit}/legislation.com.au/"
     )
 
     # index_urls = crawler.get_index_pages()
-    index_urls = ["https://www.legislation.gov.au/Browse/Results/ByTitle/Acts/InForce/Pr/0/0/principal"]
+    index_urls = [
+        "https://www.legislation.gov.au/Browse/Results/ByTitle/Acts/InForce/Ag/0/0/principal",
+        "https://www.legislation.gov.au/Browse/Results/ByTitle/Acts/InForce/Pr/0/0/principal",
+    ]
 
     start = datetime.datetime.now()
-    for index_url in index_urls:
-        logging.info(f"index_url: {index_url}")
+    index_count = len(index_urls)
+    for i, index_url in enumerate(index_urls):
+        logging.info(f"Index {i} of {index_count}: Took: {datetime.datetime.now() - start} Url: {index_url}")
         for act in crawler.get_acts(index_url, save_path, act_limit=act_limit, delay_sec=delay_sec):
             logging.debug(f"act: {act}")
 

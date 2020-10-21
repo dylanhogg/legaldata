@@ -2,7 +2,9 @@ import os
 import re
 import time
 import json
+import dataclasses
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Dict
 from urllib.request import urlopen
@@ -53,28 +55,18 @@ class ActCrawler(base.Crawler):
         return download_pages
 
     @staticmethod
-    def _get_act(soup) -> Act:
-        # Match: /Details/C2014C00072/18b59cb0-976c-4721-ac2b-c5a57016703b or /Details/<act_code>/<code_guid>
-        code_guids = re.findall(
-            r"../Details/([^/]*/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})", str(soup)
-        )
-        download_links = [f"https://www.legislation.gov.au/Details/{code_guid}" for code_guid in code_guids]
-        download_links = list(set(download_links))
-
-        meta_tags_tuples = [(x.attrs.get("name", None), x.attrs.get("content", None)) for x in soup.find_all("meta")]
-        meta_tags = dict([(x[0].strip().lower(), x[1].strip()) for x in meta_tags_tuples if x[0] is not None])
-
-        title = meta_tags.get("title", "")
-        desc = meta_tags.get("description", "")
-
-        # TODO: get additional metadata like, page size, series link, "In force - Latest Version" flag etc
-        return Act(title, desc, meta_tags, download_links)
+    def clean_details_text(s) -> List[str]:
+        s = re.sub("[\n]{2,}", "$NL$", s)
+        s = re.sub("[\n]+", " ", s)
+        s = s.replace("$NL$", "\n")
+        s = re.sub(" +", " ", s)
+        return s.strip().split("\n")
 
     def get_acts(
         self,
         index_url,
         save_path,
-        save_file_prefix="legislation.com.au_",
+        save_file_prefix="",
         cache_path=None,
         use_cache=True,
         act_limit=None,
@@ -92,7 +84,7 @@ class ActCrawler(base.Crawler):
 
         logging.info(f"Crawling index_url: {index_url}")
         logging.warning("TODO: Handle multiple pages in index page!")
-        # TODO: Handle multiple pages in index page!
+        # TODO: WARN: Handle multiple pages in index page!
         #       Currently we hope all acts are on the first page, which is often the case
         (seed_soup, loaded_from_cache) = self._scrape_page(index_url, cache_path, use_cache)
         download_page_urls = self._get_act_download_page_urls(seed_soup)
@@ -104,32 +96,85 @@ class ActCrawler(base.Crawler):
                 break
 
             logging.debug(f"Crawling download page: {download_page_url}")
-            (download_soup, loaded_from_cache) = self._scrape_page(download_page_url, cache_path, use_cache)
-            act = self._get_act(download_soup)
+            act = self._get_act(download_page_url, cache_path, use_cache)
             acts.append(act)
 
         # Download act files (pdf, docx, etc)
         for act in acts:
             act.saved_filenames = []
             for i, download_link in enumerate(act.download_links):
-                # Save binary file (with or without cache)
+                # Save binary file
                 save_filename, file_ext, loaded_from_cache = self._scrape_file(
                     act, download_link, save_path, save_file_prefix, cache_path, use_cache
                 )
-                act.saved_filenames.append(save_filename)
+                act.saved_filenames.append(os.path.basename(save_filename))
                 # Save metadata
-                if i == 0:
-                    metadata_filename = (save_filename.replace(file_ext, "")) + ".json"
+                if i == (len(act.download_links) - 1):
+                    metadata_filename = (save_filename.replace(file_ext, "")) + ".meta.json"
                     with open(metadata_filename, "w") as f:
-                        pretty_json = json.dumps(act.meta_tags, indent=4, sort_keys=True)
-                        f.write(pretty_json)
+                        metadata = json.dumps(dataclasses.asdict(act), indent=4)  # , sort_keys=True)
+                        f.write(metadata)
                 # Throttle
                 if not loaded_from_cache:
                     time.sleep(delay_sec)
 
-        # TODO: loop thru download_page_urls for act metadata also
-
         return acts
+
+    def _get_act(self, download_page_url, cache_path, use_cache) -> Act:
+        (soup, loaded_from_cache) = self._scrape_page(download_page_url, cache_path, use_cache)
+
+        # Get file links by matching:
+        # /Details/C2014C00072/18b59cb0-976c-4721-ac2b-c5a57016703b or /Details/<act_code>/<code_guid>
+        code_guids = re.findall(
+            r"../Details/([^/]*/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})", str(soup)
+        )
+        download_links = [f"https://www.legislation.gov.au/Details/{code_guid}" for code_guid in code_guids]
+        download_links = list(set(download_links))
+
+        # Get html <meta> tag info
+        meta_tags_tuples = [(x.attrs.get("name", None), x.attrs.get("content", None)) for x in soup.find_all("meta")]
+        meta_tags = dict([(x[0].strip().lower(), x[1].strip()) for x in meta_tags_tuples if x[0] is not None])
+        title = meta_tags.get("title", "")
+        desc = meta_tags.get("description", "")
+
+        # Get classification
+        classification = soup.find("tr", {"id": "MainContent_ucLegItemPane_trNumberYearClassification"})
+        classification = classification.text.strip() if classification is not None else "Classification not found"
+
+        # Get full description
+        desc_full = soup.find("span", {"id": "MainContent_ucLegItemPane_lblBD"})
+        desc_full = desc_full.text.strip() if desc_full is not None else "Full description not found"
+
+        # Get admins
+        admins = soup.find("span", {"id": "MainContent_ucLegItemPane_lblAdminDepts"})
+        admins = admins.text.strip() if admins is not None else "Admins not found"
+
+        # Get general page details
+        page_details = soup.find("div", {"id": "MainContent_leftDetailMeta"})
+        if page_details is not None:
+            page_details = page_details.text.strip()
+        else:
+            logging.warning(f"page_details html id not found for '{title}'")
+            page_details = "html id not found, try updating legaldata to latest version."
+        page_details = ActCrawler.clean_details_text(page_details)
+
+        # TODO: get additional metadata like, page size, series link, "In force - Latest Version" flag etc
+        crawl_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+        saved_filenames = []
+        return Act(
+            title,
+            desc,
+            desc_full,
+            classification,
+            admins,
+            page_details,
+            meta_tags,
+            download_page_url,
+            download_links,
+            loaded_from_cache,
+            crawl_date,
+            saved_filenames,
+        )
 
     @staticmethod
     def get_index_pages() -> List[str]:

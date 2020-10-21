@@ -25,7 +25,7 @@ def test_get_acts_cached():
         assert act.title is not None and len(act.title) > 0
         assert len(act.download_links) == len(act.saved_filenames)
         for file in act.saved_filenames:
-            assert Path(file).is_file()
+            assert Path(os.path.join(save_path, file)).is_file()
 
 
 def test_get_acts_no_cache():
@@ -38,7 +38,7 @@ def test_get_acts_no_cache():
         assert act.title is not None and len(act.title) > 0
         assert len(act.download_links) == len(act.saved_filenames)
         for file in act.saved_filenames:
-            assert Path(file).is_file()
+            assert Path(os.path.join(save_path, file)).is_file()
 
 
 def xtest_pdf2text():

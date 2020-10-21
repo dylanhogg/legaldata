@@ -50,7 +50,7 @@ class Crawler:
     @staticmethod
     def _get_save_filename(act_title, save_file_prefix, header_filename, header_ext) -> Tuple[str, str]:
         title_filename = "" if act_title is None else Crawler.valid_filename(act_title) + "_"
-        header_filename = header_filename.lower()
+        header_filename = Crawler.valid_filename(header_filename)
 
         if header_ext.lower() in header_filename.lower():
             filename = f"{save_file_prefix}{title_filename}{header_filename}"
@@ -58,6 +58,19 @@ class Crawler:
             filename = f"{save_file_prefix}{title_filename}{header_filename}{header_ext}"
 
         return filename.lower(), header_ext.lower()
+
+    @staticmethod
+    def _savefile(save_path, cache_filename, act_title, save_file_prefix, header_filename, header_ext) -> str:
+        save_filename, file_ext = Crawler._get_save_filename(act_title, save_file_prefix, header_filename, header_ext)
+        save_filepath = os.path.join(save_path, save_filename)
+        logging.info(f"Save file to {save_filepath}")
+
+        assert Path(cache_filename).is_file()
+        save_filepath_abs = os.path.abspath(save_filepath)
+        shutil.copy2(cache_filename, save_filepath_abs)
+        assert Path(save_filepath_abs).is_file()
+
+        return save_filepath_abs, file_ext
 
     def _scrape_file(
         self, act, download_link, save_path, save_file_prefix, cache_path, use_cache
@@ -90,12 +103,9 @@ class Crawler:
                     pickle.dump((file_bytes, cache_filename, headers), f_out, protocol=pickle.HIGHEST_PROTOCOL)
 
             # Copy file to target save_path
-            save_filename, file_ext = self._get_save_filename(act.title, save_file_prefix, header_filename, header_ext)
-            save_filepath_abs = os.path.abspath(os.path.join(save_path, save_filename))
-            logging.info(f"Copy new cached file {cache_filename} to {save_filepath_abs}")
-
-            assert Path(cache_filename).is_file()
-            shutil.copy2(cache_filename, save_filepath_abs)
+            save_filepath_abs, file_ext = Crawler._savefile(
+                save_path, cache_filename, act.title, save_file_prefix, header_filename, header_ext
+            )
 
         else:
             logging.debug(f"Skipping download file: {cache_filename}")
@@ -105,15 +115,10 @@ class Crawler:
             with open(pkl_cache_filename, "rb") as f:
                 (file_bytes, cache_filename, headers) = pickle.load(f)
                 header_filename, header_ext = self._get_header_info(headers)
-                save_filename, file_ext = self._get_save_filename(
-                    act.title, save_file_prefix, header_filename, header_ext
+
+                # Copy file to target save_path
+                save_filepath_abs, file_ext = Crawler._savefile(
+                    save_path, cache_filename, act.title, save_file_prefix, header_filename, header_ext
                 )
-                save_filepath_abs = os.path.abspath(os.path.join(save_path, save_filename))
-                logging.info(f"Copy old cached file {cache_filename} to {save_filepath_abs}")
 
-                # TODO: should maybe save file_bytes to save_filename instead of relying on cache_filename existing?
-                assert Path(cache_filename).is_file()
-                shutil.copy2(cache_filename, save_filepath_abs)
-
-        assert Path(save_filepath_abs).is_file()
         return save_filepath_abs, file_ext, loaded_from_cache
