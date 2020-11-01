@@ -7,11 +7,15 @@ def run_legislation_crawler():
     from legaldata.legislation.crawler import ActCrawler
 
     crawler = ActCrawler()
-    delay_sec = 1
+
+    # Full run
+    delay_sec = 2
     act_limit = None
     save_path = "./_data/full_v1/legislation.com.au/"
     index_urls = crawler.get_index_pages()
 
+    # Test run
+    # delay_sec = 1
     # act_limit = 3
     # save_path = (
     #     "./_data/app_output_path_no_limit/legislation.com.au/"
@@ -34,28 +38,29 @@ def run_legislation_crawler():
 
 
 def run_austlii_crawler():
-    logging.info("Example 1: Crawl austlii.edu.au")
+    logging.info("Example 2: Crawl austlii.edu.au")
     from legaldata.austlii.crawler import ActCrawler
 
     crawler = ActCrawler()
-    delay_sec = 3
-    # act_limit = None
-    # save_path = "./_data/full_v1/austlii.edu.au/"
-    # index_urls = crawler.get_index_pages()
 
-    # act_limit = 5
+    # Full run
+    delay_sec = 2
     act_limit = None
-    save_path = (
-        "./_data/app_output_path_no_limit/austlii.edu.au/"
-        if act_limit is None
-        else f"./_data/app_output_path_limit_{act_limit}/austlii.edu.au/"
-    )
-    index_urls = [
-        "http://www.austlii.edu.au/cgi-bin/viewtoc/au/legis/cth/consol_act/toc-A.html",
-        "http://www.austlii.edu.au/cgi-bin/viewtoc/au/legis/cth/consol_act/toc-K.html",
-        # "http://www.austlii.edu.au/cgi-bin/viewtoc/au/legis/cth/consol_act/toc-B.html",
-        # "http://www.austlii.edu.au/cgi-bin/viewtoc/au/legis/cth/consol_act/toc-C.html",
-    ]
+    save_path = "./_data/full_v1/austlii.edu.au/"
+    index_urls = crawler.get_index_pages()
+
+    # Test run
+    # delay_sec = 1
+    # act_limit = 2
+    # save_path = (
+    #     "./_data/app_output_path_no_limit/austlii.edu.au/"
+    #     if act_limit is None
+    #     else f"./_data/app_output_path_limit_{act_limit}/austlii.edu.au/"
+    # )
+    # index_urls = [
+    #     "http://www.austlii.edu.au/cgi-bin/viewtoc/au/legis/cth/consol_act/toc-A.html",
+    #     "http://www.austlii.edu.au/cgi-bin/viewtoc/au/legis/cth/consol_act/toc-K.html",
+    # ]
 
     start = datetime.datetime.now()
     index_count = len(index_urls)

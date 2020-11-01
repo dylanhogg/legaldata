@@ -5,11 +5,8 @@ from typing import List, Dict
 @dataclass
 class Act:
     title: str
+    file_code: str
     desc: str
-    desc_full: str
-    classification: str
-    admins: str
-    page_details: List[str]
     meta_tags: Dict[str, str]
     page_url: str
     download_links: List[str]

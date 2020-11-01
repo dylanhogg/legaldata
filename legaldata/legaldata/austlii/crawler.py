@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List, Tuple
 from bs4 import BeautifulSoup
 from legaldata import base
-from legaldata.legislation.act import Act
+from legaldata.austlii.act import Act
 
 
 class ActCrawler(base.Crawler):
@@ -187,6 +187,9 @@ class ActCrawler(base.Crawler):
         download_links = [base_url + x["href"] for x in dl_div.find_all("a")]
         download_links = list(set(download_links))
 
+        # Get code
+        file_code = "" if len(download_links) == 0 else os.path.splitext(os.path.basename(sorted(download_links)[0]))[0]
+
         # Get <title> tag
         title_tag = soup.find("title")
         title = title_tag.text.strip() if title_tag is not None else ""
@@ -201,27 +204,12 @@ class ActCrawler(base.Crawler):
         meta_tags = dict([(x[0].strip().lower(), x[1].strip()) for x in meta_tags_tuples if x[0] is not None])
         desc = meta_tags.get("description", "")
 
-        # Get classification
-        classification = "N/A"
-
-        # Get full description
-        desc_full = "N/A"
-
-        # Get admins
-        admins = "N/A"
-
-        # Get general page details
-        page_details = "N/A"
-
         crawl_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
         saved_filenames = []
         return Act(
             title,
+            file_code,
             desc,
-            desc_full,
-            classification,
-            admins,
-            page_details,
             meta_tags,
             download_page_url,
             download_links,
