@@ -46,13 +46,7 @@ class ActCrawler(base.Crawler):
             logging.info(f"Scraping: {url}")
 
             # TODO: define new user-agent for legaldata
-            req = urllib.request.Request(
-                url,
-                data=None,
-                headers={
-                    "User-Agent": self.user_agent
-                }
-            )
+            req = urllib.request.Request(url, data=None, headers={"User-Agent": self.user_agent})
             response = urllib.request.urlopen(req)
             soup = BeautifulSoup(response, "html.parser")
             if cache_filename is not None:
@@ -68,9 +62,7 @@ class ActCrawler(base.Crawler):
     @staticmethod
     def _get_act_download_page_urls(soup) -> List[str]:
         regex = r"cgi-bin/viewdoc/au/legis/cth/consol_act/[^/]+/"
-        links = re.findall(
-            regex, str(soup)
-        )
+        links = re.findall(regex, str(soup))
         download_pages = [f"http://www.austlii.edu.au/{link}" for link in links]
         download_pages = list(set(download_pages))
         return sorted(download_pages)
@@ -84,14 +76,14 @@ class ActCrawler(base.Crawler):
         return s.strip().split("\n")
 
     def get_acts_from_index(
-            self,
-            index_url,
-            save_path,
-            save_file_prefix="",
-            cache_path=None,
-            use_cache=True,
-            act_limit=None,
-            delay_sec=5,
+        self,
+        index_url,
+        save_path,
+        save_file_prefix="",
+        cache_path=None,
+        use_cache=True,
+        act_limit=None,
+        delay_sec=5,
     ) -> List[Act]:
         assert index_url is not None
         assert save_path is not None
@@ -170,9 +162,7 @@ class ActCrawler(base.Crawler):
 
         download_filename = os.path.basename(download_link)
         regex = rf"http.+{download_filename}"
-        links = re.findall(
-            regex, str(soup)
-        )
+        links = re.findall(regex, str(soup))
         assert len(links) > 0
         return links[0]
 

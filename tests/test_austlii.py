@@ -18,7 +18,9 @@ def test_get_acts_cached():
     remove_dirs()
     act_limit = 3
     index_url = crawler.ActCrawler().get_index_pages()[0]
-    acts = crawler.ActCrawler().get_acts_from_index(index_url, save_path, use_cache=True, act_limit=act_limit, delay_sec=1)
+    acts = crawler.ActCrawler().get_acts_from_index(
+        index_url, save_path, use_cache=True, act_limit=act_limit, delay_sec=1
+    )
     assert len(acts) == act_limit
     for act in acts:
         assert act.title is not None and len(act.title) > 0
@@ -31,7 +33,9 @@ def test_get_acts_no_cache():
     remove_dirs()
     act_limit = 1
     index_url = crawler.ActCrawler().get_index_pages()[0]
-    acts = crawler.ActCrawler().get_acts_from_index(index_url, save_path, use_cache=False, act_limit=act_limit, delay_sec=1)
+    acts = crawler.ActCrawler().get_acts_from_index(
+        index_url, save_path, use_cache=False, act_limit=act_limit, delay_sec=1
+    )
     assert len(acts) == act_limit
     for act in acts:
         assert act.title is not None and len(act.title) > 0

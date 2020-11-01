@@ -53,7 +53,9 @@ class Crawler:
         return filename, ext
 
     @staticmethod
-    def _savefile(save_path, cache_filename, act_title, save_file_prefix, header_filename, header_ext, download_filename) -> str:
+    def _savefile(
+        save_path, cache_filename, act_title, save_file_prefix, header_filename, header_ext, download_filename
+    ) -> str:
         title_filename = "" if act_title is None else Crawler.valid_filename(act_title)
         header_filename = Crawler.valid_filename(header_filename)
 
@@ -105,8 +107,10 @@ class Crawler:
             download_ext = "" if len(download_split) < 2 else download_split[1]
             if len(download_ext) > 0 and download_ext.lower() != header_ext.lower():
                 # NOTE: for Astlii .txt files when .txt file requested we actually get .html page with dl links
-                logging.warning(f"Download vs header extension mismatch ({download_ext} vs {header_ext}) "
-                                f"for download_link {download_link}")
+                logging.warning(
+                    f"Download vs header extension mismatch ({download_ext} vs {header_ext}) "
+                    f"for download_link {download_link}"
+                )
 
             # Pickle binary file contents and headers for cache retrieval
             with open(cache_filename, mode="rb") as f_in:
@@ -130,7 +134,13 @@ class Crawler:
 
                 # Copy file to target save_path
                 save_filepath_abs = Crawler._savefile(
-                    save_path, cache_filename, act.title, save_file_prefix, header_filename, header_ext, download_filename
+                    save_path,
+                    cache_filename,
+                    act.title,
+                    save_file_prefix,
+                    header_filename,
+                    header_ext,
+                    download_filename,
                 )
 
         return save_filepath_abs, header_ext, loaded_from_cache
