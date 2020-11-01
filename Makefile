@@ -9,10 +9,10 @@ venv:
 	source venv/bin/activate ; pip install --upgrade pip ; pip install -r requirements-dev.txt
 	source venv/bin/activate ; pip freeze > requirements_freeze.txt
 
-## Clean up all environments and publishing artifacts
+## Clean up all publishing artifacts
 clean:
 	rm -rf venv
-	rm -rf .legaldata-cache
+	# rm -rf .legaldata-cache
 	rm -rf venv_publish
 	rm -rf venv_install_test
 	rm -rf build
