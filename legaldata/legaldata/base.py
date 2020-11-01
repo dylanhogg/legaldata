@@ -6,7 +6,7 @@ import string
 import shutil
 import pickle
 from typing import List, Tuple, Dict
-from urllib.request import urlretrieve
+import urllib
 from pathlib import Path
 from bs4 import BeautifulSoup
 
@@ -17,6 +17,9 @@ class Crawler:
 
     @staticmethod
     def valid_filename(name) -> str:
+        if name is None:
+            return None
+
         valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
         filename = name.lower()
         filename = filename.replace("https://", "")
@@ -24,6 +27,7 @@ class Crawler:
         filename = filename.replace("/", "_")
         filename = "".join(c for c in filename if c in valid_chars)
         filename = filename.replace(" ", "_")
+        filename = filename.strip("_")
         return filename
 
     @staticmethod
@@ -39,7 +43,8 @@ class Crawler:
 
     @staticmethod
     def _get_header_info(headers) -> Tuple[str, str]:
-        filename = headers.get("Content-Disposition").split("filename=")[1]
+        content = headers.get("Content-Disposition")
+        filename = None if content is None or len(content.split("filename=")) < 2 else content.split("filename=")[1]
         content_type = headers.get("Content-Type").partition(";")[0].strip()
         ext = mimetypes.guess_extension(content_type)
         if ext is None:
@@ -48,21 +53,20 @@ class Crawler:
         return filename, ext
 
     @staticmethod
-    def _get_save_filename(act_title, save_file_prefix, header_filename, header_ext) -> Tuple[str, str]:
-        title_filename = "" if act_title is None else Crawler.valid_filename(act_title) + "_"
+    def _savefile(save_path, cache_filename, act_title, save_file_prefix, header_filename, header_ext, download_filename) -> str:
+        title_filename = "" if act_title is None else Crawler.valid_filename(act_title)
         header_filename = Crawler.valid_filename(header_filename)
 
-        if header_ext.lower() in header_filename.lower():
-            filename = f"{save_file_prefix}{title_filename}{header_filename}"
+        if header_filename is None and header_ext.lower() in download_filename.lower():
+            filename = f"{save_file_prefix}{title_filename}_{download_filename}"
+        elif header_filename is None:
+            filename = f"{save_file_prefix}{title_filename}_{download_filename}{header_ext}"
+        elif header_ext.lower() in header_filename.lower():
+            filename = f"{save_file_prefix}{title_filename}_{header_filename}"
         else:
-            filename = f"{save_file_prefix}{title_filename}{header_filename}{header_ext}"
+            filename = f"{save_file_prefix}{title_filename}_{header_filename}{header_ext}"
 
-        return filename.lower(), header_ext.lower()
-
-    @staticmethod
-    def _savefile(save_path, cache_filename, act_title, save_file_prefix, header_filename, header_ext) -> str:
-        save_filename, file_ext = Crawler._get_save_filename(act_title, save_file_prefix, header_filename, header_ext)
-        save_filepath = os.path.join(save_path, save_filename)
+        save_filepath = os.path.join(save_path, filename.lower())
         logging.info(f"Save file to {save_filepath}")
 
         assert Path(cache_filename).is_file()
@@ -70,7 +74,7 @@ class Crawler:
         shutil.copy2(cache_filename, save_filepath_abs)
         assert Path(save_filepath_abs).is_file()
 
-        return save_filepath_abs, file_ext
+        return save_filepath_abs
 
     def _scrape_file(
         self, act, download_link, save_path, save_file_prefix, cache_path, use_cache
@@ -83,6 +87,7 @@ class Crawler:
         cache_filename_exists = Path(cache_filename).is_file()
         pkl_cache_filename = f"{cache_path}legal-{self.valid_filename(download_link)}.pkl"
         pkl_cache_filename_exists = Path(pkl_cache_filename).is_file()
+        download_filename = os.path.basename(download_link)
 
         logging.debug(f"use_cache = {use_cache}")
 
@@ -91,10 +96,17 @@ class Crawler:
             loaded_from_cache = False
 
             # Save file from url to disk and get filename and http headers
-            _, headers = urlretrieve(download_link, cache_filename)
+            _, headers = urllib.request.urlretrieve(download_link, cache_filename)
             header_filename, header_ext = self._get_header_info(headers)
             logging.debug(f"header_filename = {header_filename}")
             logging.debug(f"header_ext = {header_ext}")
+
+            download_split = os.path.splitext(download_link)
+            download_ext = "" if len(download_split) < 2 else download_split[1]
+            if len(download_ext) > 0 and download_ext.lower() != header_ext.lower():
+                # NOTE: for Astlii .txt files when .txt file requested we actually get .html page with dl links
+                logging.warning(f"Download vs header extension mismatch ({download_ext} vs {header_ext}) "
+                                f"for download_link {download_link}")
 
             # Pickle binary file contents and headers for cache retrieval
             with open(cache_filename, mode="rb") as f_in:
@@ -103,8 +115,8 @@ class Crawler:
                     pickle.dump((file_bytes, cache_filename, headers), f_out, protocol=pickle.HIGHEST_PROTOCOL)
 
             # Copy file to target save_path
-            save_filepath_abs, file_ext = Crawler._savefile(
-                save_path, cache_filename, act.title, save_file_prefix, header_filename, header_ext
+            save_filepath_abs = Crawler._savefile(
+                save_path, cache_filename, act.title, save_file_prefix, header_filename, header_ext, download_filename
             )
 
         else:
@@ -117,8 +129,8 @@ class Crawler:
                 header_filename, header_ext = self._get_header_info(headers)
 
                 # Copy file to target save_path
-                save_filepath_abs, file_ext = Crawler._savefile(
-                    save_path, cache_filename, act.title, save_file_prefix, header_filename, header_ext
+                save_filepath_abs = Crawler._savefile(
+                    save_path, cache_filename, act.title, save_file_prefix, header_filename, header_ext, download_filename
                 )
 
-        return save_filepath_abs, file_ext, loaded_from_cache
+        return save_filepath_abs, header_ext, loaded_from_cache

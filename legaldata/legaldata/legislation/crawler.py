@@ -6,7 +6,7 @@ import dataclasses
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from legaldata import base
@@ -52,7 +52,7 @@ class ActCrawler(base.Crawler):
         # Match: /Details/C2018C00418/Download or /Details/<act_code>/Download
         act_codes = re.findall(r"../Details/([^/]*)/Download", str(soup))
         download_pages = [f"https://www.legislation.gov.au/Details/{code}/Download" for code in act_codes]
-        return download_pages
+        return sorted(download_pages)
 
     @staticmethod
     def clean_details_text(s) -> List[str]:
@@ -62,7 +62,7 @@ class ActCrawler(base.Crawler):
         s = re.sub(" +", " ", s)
         return s.strip().split("\n")
 
-    def get_acts(
+    def get_acts_from_index(
         self,
         index_url,
         save_path,
@@ -88,6 +88,7 @@ class ActCrawler(base.Crawler):
         #       Currently we hope all acts are on the first page, which is often the case
         (seed_soup, loaded_from_cache) = self._scrape_page(index_url, cache_path, use_cache)
         download_page_urls = self._get_act_download_page_urls(seed_soup)
+        logging.info(f"Number of download page URLs: {len(download_page_urls)}")
 
         # Get act information
         acts = []
@@ -103,7 +104,7 @@ class ActCrawler(base.Crawler):
         for act in acts:
             act.saved_filenames = []
             for i, download_link in enumerate(act.download_links):
-                # Save binary file
+                # Save file (docx, rtf, txt, etc)
                 save_filename, file_ext, loaded_from_cache = self._scrape_file(
                     act, download_link, save_path, save_file_prefix, cache_path, use_cache
                 )
@@ -158,7 +159,6 @@ class ActCrawler(base.Crawler):
             page_details = "html id not found, try updating legaldata to latest version."
         page_details = ActCrawler.clean_details_text(page_details)
 
-        # TODO: get additional metadata like, page size, series link, "In force - Latest Version" flag etc
         crawl_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
         saved_filenames = []
         return Act(
@@ -180,6 +180,9 @@ class ActCrawler(base.Crawler):
     def get_index_pages() -> List[str]:
         # TODO: scrape root index page to get these
         #       https://www.legislation.gov.au/Browse/ByTitle/Acts/InForce/0/0/Principal
+
+        # TODO: WARN: Need to crawl a letters and pagination to cover all acts e.g.:
+        # https://www.legislation.gov.au/Browse/Results/ByTitle/Acts/InForce/A/0/0/principal
 
         index_urls = [
             "https://www.legislation.gov.au/Browse/Results/ByTitle/Acts/InForce/Ab/0/0/principal",
