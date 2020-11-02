@@ -1,5 +1,6 @@
 import os
 import filetype
+import time
 import logging
 import mimetypes
 import string
@@ -43,13 +44,15 @@ class Crawler:
 
     @staticmethod
     def _get_header_info(headers) -> Tuple[str, str]:
-        content = headers.get("Content-Disposition")
-        filename = None if content is None or len(content.split("filename=")) < 2 else content.split("filename=")[1]
-        content_type = headers.get("Content-Type").partition(";")[0].strip()
+        content_val = headers.get("Content-Disposition")
+        filename = None if content_val is None or len(content_val.split("filename=")) < 2 else content_val.split("filename=")[1]
+        content_type_val = headers.get("Content-Type")
+        content_type = "" if content_type_val is None or len(content_type_val) == 0 else content_type_val.partition(";")[0].strip()
         ext = mimetypes.guess_extension(content_type)
         if ext is None:
             logging.info(f"Unknown file type for content_type: {content_type}")
-            ext = ".unk"
+        else:
+            ext = ext.lower()
         return filename, ext
 
     @staticmethod
@@ -59,14 +62,13 @@ class Crawler:
         title_filename = "" if act_title is None else Crawler.valid_filename(act_title)
         header_filename = Crawler.valid_filename(header_filename)
 
-        if header_filename is None and header_ext.lower() in download_filename.lower():
+        if header_filename is None:
             filename = f"{save_file_prefix}{title_filename}_{download_filename}"
-        elif header_filename is None:
-            filename = f"{save_file_prefix}{title_filename}_{download_filename}{header_ext}"
-        elif header_ext.lower() in header_filename.lower():
-            filename = f"{save_file_prefix}{title_filename}_{header_filename}"
         else:
-            filename = f"{save_file_prefix}{title_filename}_{header_filename}{header_ext}"
+            filename = f"{save_file_prefix}{title_filename}_{header_filename}"
+
+        if header_ext is not None and header_ext.lower() not in filename.lower():
+            filename = filename + header_ext
 
         save_filepath = os.path.join(save_path, filename.lower())
         logging.info(f"Save file to {save_filepath}")
@@ -79,8 +81,8 @@ class Crawler:
         return save_filepath_abs
 
     def _scrape_file(
-        self, act, download_link, save_path, save_file_prefix, cache_path, use_cache
-    ) -> Tuple[str, str, bool]:
+        self, act, download_link, save_path, save_file_prefix, cache_path, use_cache, retry_attempts=5
+    ) -> Tuple[str, str, bool, bool]:
         assert download_link is not None
         assert save_path is not None
         assert save_file_prefix is not None
@@ -97,19 +99,41 @@ class Crawler:
             logging.debug(f"Scraping file from url: {download_link}")
             loaded_from_cache = False
 
-            # Save file from url to disk and get filename and http headers
-            _, headers = urllib.request.urlretrieve(download_link, cache_filename)
+            attempts = 0
+            headers = {}
+            urlretrieve_success = False
+            while attempts < retry_attempts:
+                try:
+                    # Save file from url to disk and get filename and http headers
+                    # urlretrieve can throw many exceptions including urllib.error.ContentTooShortError
+                    _, headers = urllib.request.urlretrieve(download_link, cache_filename)
+                    urlretrieve_success = True
+                except Exception as ex:
+                    attempts += 1
+                    retry_sleep = attempts * 10
+                    logging.warning(
+                        f"Attempt #{attempts} urlretrieve error. url: {download_link}"
+                        f", exception: {ex} (sleeping for {retry_sleep} sec)"
+                    )
+                    time.sleep(retry_sleep)
+                    continue
+                else:
+                    break
+
+            if not urlretrieve_success:
+                logging.error(f"Failed to urlretrieve url {download_link} after {attempts} attempts, skipping url.")
+                return "", "", False, False
+
             header_filename, header_ext = self._get_header_info(headers)
             logging.debug(f"header_filename = {header_filename}")
             logging.debug(f"header_ext = {header_ext}")
 
             download_split = os.path.splitext(download_link)
             download_ext = "" if len(download_split) < 2 else download_split[1]
-            if len(download_ext) > 0 and download_ext.lower() != header_ext.lower():
+            if len(download_ext) > 0 and header_ext is not None and download_ext.lower() != header_ext.lower():
                 # NOTE: for Astlii .txt files when .txt file requested we actually get .html page with dl links
-                logging.warning(
-                    f"Download vs header extension mismatch ({download_ext} vs {header_ext}) "
-                    f"for download_link {download_link}"
+                logging.info(
+                    f"Download vs header extension mismatch ({download_ext} vs {header_ext}) for download_link {download_link}"
                 )
 
             # Pickle binary file contents and headers for cache retrieval
@@ -143,4 +167,4 @@ class Crawler:
                     download_filename,
                 )
 
-        return save_filepath_abs, header_ext, loaded_from_cache
+        return save_filepath_abs, header_ext, loaded_from_cache, True

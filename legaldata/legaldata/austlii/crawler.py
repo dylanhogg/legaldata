@@ -123,27 +123,29 @@ class ActCrawler(base.Crawler):
             act.saved_filenames = []
             for i, download_link in enumerate(act.download_links):
                 # Save file (docx, rtf, txt, etc)
-                save_filename, header_ext, loaded_from_cache = self._scrape_file(
+                save_filename, header_ext, loaded_from_cache, success = self._scrape_file(
                     act, download_link, save_path, save_file_prefix, cache_path, use_cache
                 )
+                if not success:
+                    continue
 
                 # For Austlii, when .txt file requested we actually get .html page with dl links in it,
                 # so we parse the html page for the real .txt file link.
                 download_split = os.path.splitext(download_link)
                 download_ext = "" if len(download_split) < 2 else download_split[1]
-                if len(download_ext) > 0 and header_ext.lower() != download_ext.lower():
+                if len(download_ext) > 0 and header_ext is not None and header_ext.lower() != download_ext.lower():
                     # Download txt file from link in html page
                     (seed_soup, loaded_from_cache) = self._scrape_page(download_link, cache_path, use_cache)
                     redirected_download_link = self._get_act_redirected_download_page_url(seed_soup, download_link)
                     os.remove(save_filename)  # Remove redirect html page
-                    save_filename, header_ext, loaded_from_cache = self._scrape_file(
+                    save_filename, header_ext, loaded_from_cache, success = self._scrape_file(
                         act, redirected_download_link, save_path, save_file_prefix, cache_path, use_cache
                     )
 
                 act.saved_filenames.append(os.path.basename(save_filename))
                 # Save metadata
                 if i == (len(act.download_links) - 1):
-                    metadata_filename = (save_filename.replace(header_ext.lower(), "")) + ".meta.json"
+                    metadata_filename = os.path.splitext(save_filename)[0] + ".meta.json"
                     with open(metadata_filename, "w") as f:
                         metadata = json.dumps(dataclasses.asdict(act), indent=4)  # , sort_keys=True)
                         f.write(metadata)

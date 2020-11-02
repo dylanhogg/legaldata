@@ -105,15 +105,18 @@ class ActCrawler(base.Crawler):
             act.saved_filenames = []
             for i, download_link in enumerate(act.download_links):
                 # Save file (docx, rtf, txt, etc)
-                save_filename, file_ext, loaded_from_cache = self._scrape_file(
+                save_filename, file_ext, loaded_from_cache, success = self._scrape_file(
                     act, download_link, save_path, save_file_prefix, cache_path, use_cache
                 )
+                if not success:
+                    continue
+
                 act.saved_filenames.append(os.path.basename(save_filename))
                 # Save metadata
                 if i == (len(act.download_links) - 1):
-                    metadata_filename = (save_filename.replace(file_ext, "")) + ".meta.json"
+                    metadata_filename = os.path.splitext(save_filename)[0] + ".meta.json"
                     with open(metadata_filename, "w") as f:
-                        metadata = json.dumps(dataclasses.asdict(act), indent=4)  # , sort_keys=True)
+                        metadata = json.dumps(dataclasses.asdict(act), indent=4)
                         f.write(metadata)
                 # Throttle
                 if not loaded_from_cache:
