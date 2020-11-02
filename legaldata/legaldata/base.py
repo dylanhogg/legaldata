@@ -45,9 +45,15 @@ class Crawler:
     @staticmethod
     def _get_header_info(headers) -> Tuple[str, str]:
         content_val = headers.get("Content-Disposition")
-        filename = None if content_val is None or len(content_val.split("filename=")) < 2 else content_val.split("filename=")[1]
+        filename = (
+            None
+            if content_val is None or len(content_val.split("filename=")) < 2
+            else content_val.split("filename=")[1]
+        )
         content_type_val = headers.get("Content-Type")
-        content_type = "" if content_type_val is None or len(content_type_val) == 0 else content_type_val.partition(";")[0].strip()
+        content_type = (
+            "" if content_type_val is None or len(content_type_val) == 0 else content_type_val.partition(";")[0].strip()
+        )
         ext = mimetypes.guess_extension(content_type)
         if ext is None:
             logging.info(f"Unknown file type for content_type: {content_type}")
