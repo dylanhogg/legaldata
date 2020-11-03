@@ -1,3 +1,4 @@
 beautifulsoup4
 filetype
 pdfminer.six
+cryptography>=3.2
