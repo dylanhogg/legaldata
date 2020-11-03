@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = "0.0.3"
+version = "0.1.0"
 
 with open("README.md", "r") as f:
     long_description = f.read()
@@ -19,7 +19,7 @@ setup(
     author_email="dylanhogg@gmail.com",
     # https://pypi.org/classifiers/
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Intended Audience :: Legal Industry",
         "Topic :: Software Development",
