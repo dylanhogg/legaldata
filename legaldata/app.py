@@ -9,7 +9,7 @@ def run_legislation_crawler():
     crawler = ActCrawler()
 
     # Full run
-    # delay_sec = 2
+    # delay_sec = 3
     # act_limit = None
     # save_path = "./_data/full_v1/legislation.com.au/"
     # index_urls = crawler.get_index_pages()
@@ -44,7 +44,7 @@ def run_austlii_crawler():
     crawler = ActCrawler()
 
     # Full run
-    # delay_sec = 2
+    # delay_sec = 3
     # act_limit = None
     # save_path = "./_data/full_v1/austlii.edu.au/"
     # index_urls = crawler.get_index_pages()
@@ -59,7 +59,7 @@ def run_austlii_crawler():
     )
     index_urls = [
         "http://www.austlii.edu.au/cgi-bin/viewtoc/au/legis/cth/consol_act/toc-A.html",
-        # "http://www.austlii.edu.au/cgi-bin/viewtoc/au/legis/cth/consol_act/toc-K.html",
+        "http://www.austlii.edu.au/cgi-bin/viewtoc/au/legis/cth/consol_act/toc-K.html",
     ]
 
     start = datetime.datetime.now()

@@ -1,12 +1,11 @@
 import os
-import filetype
 import time
 import logging
 import mimetypes
 import string
 import shutil
 import pickle
-from typing import List, Tuple, Dict
+from typing import Tuple
 import urllib
 from pathlib import Path
 from bs4 import BeautifulSoup
@@ -128,6 +127,7 @@ class Crawler:
 
             if not urlretrieve_success:
                 logging.error(f"Failed to urlretrieve url {download_link} after {attempts} attempts, skipping url.")
+                # TODO: write to and error file/log
                 return "", "", False, False
 
             header_filename, header_ext = self._get_header_info(headers)

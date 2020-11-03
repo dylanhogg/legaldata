@@ -4,6 +4,8 @@ import time
 import json
 import dataclasses
 import logging
+import urllib
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
@@ -22,8 +24,12 @@ class ActCrawler(base.Crawler):
     https://www.legislation.gov.au/Content/Linking
     """
 
-    def __init__(self):
+    def __init__(self, user_agent="Mozilla/5.0 pypi.org/project/legaldata/"):
         super(ActCrawler, self).__init__()
+        self.user_agent = user_agent
+        opener = urllib.request.build_opener()
+        opener.addheaders = [("User-Agent", self.user_agent)]
+        urllib.request.install_opener(opener)
 
     def _scrape_page(self, url, cache_path, use_cache) -> Tuple[BeautifulSoup, bool]:
         cache_filename = f"{cache_path}legal-{self.valid_filename(url)}.html"

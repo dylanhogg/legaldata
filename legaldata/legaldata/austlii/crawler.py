@@ -24,12 +24,9 @@ class ActCrawler(base.Crawler):
     http://www.austlii.edu.au/about.html
     """
 
-    def __init__(self):
+    def __init__(self, user_agent="Mozilla/5.0 pypi.org/project/legaldata/"):
         super(ActCrawler, self).__init__()
-
-        # self.user_agent = "Mozilla/5.0 legaldata"
-        self.user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36"
-
+        self.user_agent = user_agent
         opener = urllib.request.build_opener()
         opener.addheaders = [("User-Agent", self.user_agent)]
         urllib.request.install_opener(opener)
@@ -98,12 +95,14 @@ class ActCrawler(base.Crawler):
         logging.info(f"Crawling index_url: {index_url}")
         logging.warning("TODO: Handle multiple pages in index page!")
         # TODO: WARN: Handle multiple pages in index page!
-        #       Currently we hope all acts are on the first page, which is often the case
+        #       Currently we hope all acts are on the first page, which appears to be the case but isn't tested.
         try:
             (seed_soup, loaded_from_cache) = self._scrape_page(index_url, cache_path, use_cache)
         except urllib.error.HTTPError as err:
-            # Index pages K, X, Y, Z don't exist as of Oct 2020.
-            logging.warning(f"Index page {index_url} retured HTTPError: {err}")
+            logging.error(
+                f"Index page {index_url} retured HTTPError: {err} "
+                f"(note that indexes K, X, Y, Z don't exist as of Oct 2020)"
+            )
             return []
         download_page_urls = self._get_act_download_page_urls(seed_soup)
         logging.info(f"Number of download page URLs: {len(download_page_urls)}")
@@ -158,7 +157,7 @@ class ActCrawler(base.Crawler):
     @staticmethod
     def _get_act_redirected_download_page_url(soup, download_link) -> str:
         # url: http://www8.austlii.edu.au/cgi-bin/download.cgi/cgi-bin/download.cgi/download/au/legis/cth/consol_act/anhcslia1998780.txt
-        # download_link: 'http://www.austlii.edu.au/au/legis/cth/consol_act/amsaa1990405.txt'
+        # download_link: http://www.austlii.edu.au/au/legis/cth/consol_act/amsaa1990405.txt
         # download_ext : .txt
         # header_ext   : .html
 
